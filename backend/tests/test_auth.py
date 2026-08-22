@@ -9,7 +9,6 @@ from app.models import User, UserRole
 from app.main import app
 from app.auth import get_password_hash
 
-# Use StaticPool so all threads share the same in-memory SQLite DB
 SQLALCHEMY_DATABASE_URL = "sqlite://"
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL,
@@ -25,10 +24,9 @@ def override_get_db():
     finally:
         db.close()
 
-app.dependency_overrides[get_db] = override_get_db
-
 @pytest.fixture(autouse=True)
 def setup_test_db():
+    app.dependency_overrides[get_db] = override_get_db
     Base.metadata.create_all(bind=engine)
     db = TestingSessionLocal()
     
@@ -52,6 +50,7 @@ def setup_test_db():
     db.close()
     yield
     Base.metadata.drop_all(bind=engine)
+    app.dependency_overrides.clear()
 
 client = TestClient(app)
 
@@ -83,18 +82,14 @@ def test_current_user_me_endpoint():
     assert user_data["role"] == "EMPLOYEE"
 
 def test_rbac_admin_only_endpoint():
-    # Login as Employee
     login_emp = client.post("/api/auth/login", json={"email": "emp_test@hrms.com", "password": "pass123"})
     token_emp = login_emp.json()["access_token"]
     
-    # Employee attempting admin endpoint should fail with 403
     res_emp = client.get("/api/auth/admin-only", headers={"Authorization": f"Bearer {token_emp}"})
     assert res_emp.status_code == 403
     
-    # Login as Admin
     login_admin = client.post("/api/auth/login", json={"email": "admin_test@hrms.com", "password": "pass123"})
     token_admin = login_admin.json()["access_token"]
     
-    # Admin attempting admin endpoint should succeed
     res_admin = client.get("/api/auth/admin-only", headers={"Authorization": f"Bearer {token_admin}"})
     assert res_admin.status_code == 200
