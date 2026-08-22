@@ -16,10 +16,25 @@ def get_employee_for_user(db: Session, user: User) -> Employee:
     if not emp:
         emp = db.query(Employee).filter(Employee.email == user.email).first()
     if not emp:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Employee profile not found for current user"
+        name_parts = (user.full_name or "New User").split(" ", 1)
+        fname = name_parts[0]
+        lname = name_parts[1] if len(name_parts) > 1 else ""
+        emp_code = f"EMP{user.id:04d}"
+        login_id = user.email.split("@")[0]
+        emp = Employee(
+            user_id=user.id,
+            emp_code=emp_code,
+            login_id=login_id,
+            first_name=fname,
+            last_name=lname,
+            email=user.email,
+            department="Engineering",
+            job_position="Employee",
+            status="Absent"
         )
+        db.add(emp)
+        db.commit()
+        db.refresh(emp)
     return emp
 
 def build_attendance_response(att: Attendance) -> AttendanceResponse:
@@ -50,7 +65,7 @@ def check_in(
 ):
     emp = get_employee_for_user(db, current_user)
     today_str = (payload.date if payload and payload.date else date.today().isoformat())
-    now_iso = datetime.utcnow().isoformat()
+    now_iso = datetime.now().isoformat()
 
     existing = db.query(Attendance).filter(
         Attendance.employee_id == emp.id,
@@ -90,7 +105,7 @@ def check_out(
 ):
     emp = get_employee_for_user(db, current_user)
     today_str = (payload.date if payload and payload.date else date.today().isoformat())
-    now_iso = datetime.utcnow().isoformat()
+    now_iso = datetime.now().isoformat()
 
     existing = db.query(Attendance).filter(
         Attendance.employee_id == emp.id,
@@ -111,7 +126,6 @@ def check_out(
 
     existing.check_out = now_iso
 
-    # Calculate work hours and extra hours
     try:
         in_time = datetime.fromisoformat(existing.check_in)
         out_time = datetime.fromisoformat(now_iso)
@@ -141,6 +155,7 @@ def get_today_attendance(
         return None
     return build_attendance_response(att)
 
+@router.get("/my-history", response_model=List[AttendanceResponse])
 @router.get("/history", response_model=List[AttendanceResponse])
 def get_attendance_history(
     employee_id: Optional[int] = Query(None),
@@ -163,16 +178,19 @@ def get_attendance_history(
 
     return [build_attendance_response(att) for att in records]
 
+@router.get("/all", response_model=List[AttendanceResponse])
 @router.get("/admin/all", response_model=List[AttendanceResponse])
 def get_all_attendance(
     search: Optional[str] = Query(None),
+    date: Optional[str] = Query(None),
     date_filter: Optional[str] = Query(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.HR]))
 ):
     q = db.query(Attendance).join(Employee)
-    if date_filter:
-        q = q.filter(Attendance.date == date_filter)
+    target_date = date or date_filter
+    if target_date:
+        q = q.filter(Attendance.date == target_date)
     if search:
         search_term = f"%{search}%"
         q = q.filter(

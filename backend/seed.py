@@ -5,7 +5,7 @@ from datetime import datetime, date, timedelta
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from app.database import Base, engine, SessionLocal
-from app.models import User, Employee, Attendance, UserRole
+from app.models import User, Employee, Attendance, UserRole, SalaryInformation, LeaveBalance
 from app.auth import get_password_hash
 from app.routers.employees import generate_emp_code, generate_login_id
 
@@ -26,6 +26,7 @@ def seed_database():
                 "dept": "Executive",
                 "position": "Chief Administrator",
                 "status": "Present",
+                "wage": 150000.0,
             },
             {
                 "email": "hr@hrms.com",
@@ -37,6 +38,7 @@ def seed_database():
                 "dept": "Human Resources",
                 "position": "HR Manager",
                 "status": "Present",
+                "wage": 85000.0,
             },
             {
                 "email": "john@hrms.com",
@@ -48,6 +50,7 @@ def seed_database():
                 "dept": "Engineering",
                 "position": "Senior Software Engineer",
                 "status": "Present",
+                "wage": 60000.0,
             },
         ]
 
@@ -66,8 +69,8 @@ def seed_database():
 
             emp = db.query(Employee).filter(Employee.email == u["email"]).first()
             if not emp:
-                code = generate_emp_code(db)
-                login = generate_login_id(db, u["first_name"], u["last_name"])
+                code = generate_emp_code(db, first_name=u["first_name"], last_name=u["last_name"], company="Odoo India", date_of_joining="2024-01-10")
+                login = code
                 emp = Employee(
                     user_id=user.id,
                     emp_code=code,
@@ -79,14 +82,38 @@ def seed_database():
                     department=u["dept"],
                     job_position=u["position"],
                     manager_name="System Admin" if u["role"] != UserRole.ADMIN else "Board of Directors",
-                    company="HRMS Corp",
+                    company="Dayflow Corp",
                     location="Headquarters",
                     date_of_joining="2024-01-10",
                     avatar_url=f"https://ui-avatars.com/api/?name={u['first_name']}+{u['last_name']}&background=6366f1&color=fff",
                     status=u["status"],
+                    date_of_birth="1992-08-14",
+                    gender="Male" if u["first_name"] != "Sarah" else "Female",
+                    nationality="Indian",
+                    marital_status="Single",
+                    address="123 Technology Boulevard, Tech Park",
+                    personal_email=f"personal.{u['email']}",
+                    pan_number="ABCDE1234F",
+                    uan_number="100908070605",
+                    bank_name="HDFC Bank",
+                    account_number="987654321012",
+                    ifsc_code="HDFC0001234",
+                    skills="Python, React, FastAPI, SQL, Tailwind CSS",
+                    resume_summary="Experienced professional specializing in software architecture, web development, and team collaboration.",
+                    what_i_love="Collaborating with talented teams and building innovative software solutions that simplify daily workflows.",
+                    hobbies="Coding, Photography, Chess, and Traveling.",
+                    certifications="AWS Certified Solutions Architect, Certified Scrum Master"
                 )
                 db.add(emp)
                 db.flush()
+
+                # Seed Salary Info
+                sal = SalaryInformation(employee_id=emp.id, monthly_wage=u["wage"])
+                db.add(sal)
+
+                # Seed Leave Balance
+                lb = LeaveBalance(employee_id=emp.id, paid_time_off=20.0, sick_leave=10.0, unpaid_leave=30.0)
+                db.add(lb)
 
         sample_employees = [
             {
@@ -98,6 +125,7 @@ def seed_database():
                 "job_position": "Frontend Lead",
                 "manager_name": "John Doe",
                 "status": "Present",
+                "wage": 55000.0,
             },
             {
                 "first_name": "Marcus",
@@ -108,6 +136,7 @@ def seed_database():
                 "job_position": "UI/UX Designer",
                 "manager_name": "Sarah Jenkins",
                 "status": "On Leave",
+                "wage": 50000.0,
             },
             {
                 "first_name": "Priya",
@@ -118,14 +147,15 @@ def seed_database():
                 "job_position": "Growth Strategist",
                 "manager_name": "Sarah Jenkins",
                 "status": "Absent",
+                "wage": 48000.0,
             },
         ]
 
         for s in sample_employees:
             emp = db.query(Employee).filter(Employee.email == s["email"]).first()
             if not emp:
-                code = generate_emp_code(db)
-                login = generate_login_id(db, s["first_name"], s["last_name"])
+                code = generate_emp_code(db, first_name=s["first_name"], last_name=s["last_name"], company="Odoo India", date_of_joining="2025-06-01")
+                login = code
                 emp = Employee(
                     emp_code=code,
                     login_id=login,
@@ -136,14 +166,36 @@ def seed_database():
                     department=s["department"],
                     job_position=s["job_position"],
                     manager_name=s["manager_name"],
-                    company="HRMS Corp",
+                    company="Dayflow Corp",
                     location="Headquarters",
                     date_of_joining="2025-06-01",
                     avatar_url=f"https://ui-avatars.com/api/?name={s['first_name']}+{s['last_name']}&background=0284c7&color=fff",
                     status=s["status"],
+                    date_of_birth="1996-03-25",
+                    gender="Female" if s["first_name"] in ["Emily", "Priya"] else "Male",
+                    nationality="Indian",
+                    marital_status="Single",
+                    address="456 Innovation Way, Tech District",
+                    personal_email=f"personal.{s['email']}",
+                    pan_number="XYZDE5678G",
+                    uan_number="100908070999",
+                    bank_name="ICICI Bank",
+                    account_number="987654321999",
+                    ifsc_code="ICIC0005678",
+                    skills="Figma, React, UI Architecture, User Research",
+                    resume_summary="Creative professional driven by human-centered design principles and seamless digital interfaces.",
+                    what_i_love="Crafting intuitive user experiences that delight users and drive business value.",
+                    hobbies="Digital Art, Music, Reading, Hiking.",
+                    certifications="UX Design Professional Certification"
                 )
                 db.add(emp)
                 db.flush()
+
+                sal = SalaryInformation(employee_id=emp.id, monthly_wage=s["wage"])
+                db.add(sal)
+
+                lb = LeaveBalance(employee_id=emp.id, paid_time_off=20.0, sick_leave=10.0, unpaid_leave=30.0)
+                db.add(lb)
 
         db.commit()
 
@@ -179,7 +231,7 @@ def seed_database():
                     db.add(att)
 
         db.commit()
-        print("Database seed finished successfully with attendance records!")
+        print("Database seed finished successfully with attendance records and demo values!")
     except Exception as e:
         db.rollback()
         print(f"Error seeding database: {e}")

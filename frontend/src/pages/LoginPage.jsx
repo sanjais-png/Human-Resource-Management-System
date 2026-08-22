@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { Building2, Lock, Mail, AlertCircle, UserCheck } from 'lucide-react'
+import { Building2, Lock, Mail, AlertCircle, UserCheck, KeyRound } from 'lucide-react'
 
 export const LoginPage = () => {
   const [email, setEmail] = useState('')
@@ -23,7 +23,7 @@ export const LoginPage = () => {
       await login(email, password)
       navigate(from, { replace: true })
     } catch (err) {
-      setError(err.response?.data?.detail || 'Login failed. Please check your credentials.')
+      setError(err.response?.data?.detail || 'Login failed. Please check your Login ID/Email or password.')
     } finally {
       setLoading(false)
     }
@@ -36,58 +36,58 @@ export const LoginPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center items-center space-x-3">
           <div className="bg-indigo-600 p-2.5 rounded-xl shadow-lg">
             <Building2 className="h-8 w-8 text-white" />
           </div>
-          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">HRMS Portal</h1>
+          <h1 className="text-3xl font-extrabold text-white tracking-tight">Dayflow HRMS</h1>
         </div>
-        <h2 className="mt-4 text-center text-sm text-slate-600 font-medium">
-          Sign in to access your Human Resource dashboard
+        <h2 className="mt-4 text-center text-xs text-slate-400 font-medium">
+          Sign In Page — Enter your Auto-Generated Login ID or Email
         </h2>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow-md sm:rounded-xl sm:px-10 border border-slate-200">
+        <div className="bg-slate-800 py-8 px-4 shadow-xl sm:rounded-2xl sm:px-10 border border-slate-700">
           {error && (
-            <div className="mb-4 bg-rose-50 border-l-4 border-rose-500 p-4 rounded text-sm text-rose-700 flex items-center">
-              <AlertCircle className="w-5 h-5 mr-2 flex-shrink-0" />
+            <div className="mb-4 bg-rose-950/80 border-l-4 border-rose-500 p-3.5 rounded text-xs text-rose-300 flex items-center">
+              <AlertCircle className="w-4 h-4 mr-2 flex-shrink-0" />
               <span>{error}</span>
             </div>
           )}
 
-          <form className="space-y-6" onSubmit={handleSubmit}>
+          <form className="space-y-5" onSubmit={handleSubmit}>
             <div>
-              <label className="block text-sm font-medium text-slate-700">Email Address</label>
-              <div className="mt-1 relative rounded-md shadow-sm">
+              <label className="block text-xs font-semibold text-slate-300 mb-1">Login ID / Email :-</label>
+              <div className="relative rounded-md shadow-sm">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-slate-400" />
+                  <Mail className="h-4 w-4 text-slate-400" />
                 </div>
                 <input
-                  type="email"
+                  type="text"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="block w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-                  placeholder="name@company.com"
+                  className="block w-full pl-9 pr-3 py-2 bg-slate-900 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-xs text-white placeholder-slate-500 font-mono"
+                  placeholder="OIJODO20240001 or name@company.com"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">Password</label>
-              <div className="mt-1 relative rounded-md shadow-sm">
+              <label className="block text-xs font-semibold text-slate-300 mb-1">Password :-</label>
+              <div className="relative rounded-md shadow-sm">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-slate-400" />
+                  <Lock className="h-4 w-4 text-slate-400" />
                 </div>
                 <input
                   type="password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                  className="block w-full pl-9 pr-3 py-2 bg-slate-900 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-xs text-white placeholder-slate-500"
                   placeholder="••••••••"
                 />
               </div>
@@ -96,37 +96,44 @@ export const LoginPage = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 transition-colors"
+              className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-xl shadow-lg text-xs font-bold text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 transition-colors"
             >
-              {loading ? 'Authenticating...' : 'Sign In'}
+              {loading ? 'Authenticating...' : 'SIGN IN'}
             </button>
           </form>
 
-          <div className="mt-8 border-t border-slate-200 pt-6">
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 flex items-center">
-              <UserCheck className="w-4 h-4 mr-1 text-indigo-500" /> Quick Fill Demo Credentials:
+          <div className="mt-4 text-center text-xs">
+            <span className="text-slate-400">Don't have an account? </span>
+            <Link to="/signup" className="font-bold text-purple-400 hover:underline">
+              Sign Up
+            </Link>
+          </div>
+
+          <div className="mt-6 border-t border-slate-700 pt-4">
+            <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2 flex items-center">
+              <UserCheck className="w-3.5 h-3.5 mr-1 text-purple-400" /> Quick Fill Demo Accounts:
             </p>
             <div className="grid grid-cols-3 gap-2">
               <button
                 type="button"
                 onClick={() => quickFill('admin@hrms.com', 'admin123')}
-                className="py-1.5 px-2 bg-slate-100 hover:bg-indigo-50 text-indigo-700 hover:text-indigo-900 border border-slate-200 hover:border-indigo-200 text-xs font-medium rounded transition"
+                className="py-1.5 px-2 bg-slate-900 hover:bg-slate-700 text-purple-300 border border-slate-700 text-[11px] font-semibold rounded transition text-center"
               >
-                Admin
+                Admin (admin@hrms.com)
               </button>
               <button
                 type="button"
                 onClick={() => quickFill('hr@hrms.com', 'hr123456')}
-                className="py-1.5 px-2 bg-slate-100 hover:bg-emerald-50 text-emerald-700 hover:text-emerald-900 border border-slate-200 hover:border-emerald-200 text-xs font-medium rounded transition"
+                className="py-1.5 px-2 bg-slate-900 hover:bg-slate-700 text-emerald-300 border border-slate-700 text-[11px] font-semibold rounded transition text-center"
               >
-                HR Manager
+                HR (hr@hrms.com)
               </button>
               <button
                 type="button"
                 onClick={() => quickFill('john@hrms.com', 'emp123456')}
-                className="py-1.5 px-2 bg-slate-100 hover:bg-blue-50 text-blue-700 hover:text-blue-900 border border-slate-200 hover:border-blue-200 text-xs font-medium rounded transition"
+                className="py-1.5 px-2 bg-slate-900 hover:bg-slate-700 text-blue-300 border border-slate-700 text-[11px] font-semibold rounded transition text-center"
               >
-                Employee
+                Employee (john@hrms.com)
               </button>
             </div>
           </div>

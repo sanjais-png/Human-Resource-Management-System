@@ -4,17 +4,18 @@ import { useAuth } from '../context/AuthContext'
 import { Sidebar } from '../components/Sidebar'
 import { Header } from '../components/Header'
 import {
-  CalendarCheck,
+  Calendar as CalendarIcon,
   Clock,
-  CheckCircle2,
-  LogOut,
-  LogIn,
-  AlertCircle,
-  Users,
   Search,
+  CheckCircle2,
+  AlertCircle,
+  ChevronLeft,
+  ChevronRight,
   Filter,
-  RefreshCw,
-  Zap
+  UserCheck,
+  UserX,
+  FileSpreadsheet,
+  Timer
 } from 'lucide-react'
 
 export const AttendancePage = () => {
@@ -30,30 +31,29 @@ export const AttendancePage = () => {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
-  // Admin Filter States
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
   const [searchQuery, setSearchQuery] = useState('')
-  const [dateFilter, setDateFilter] = useState('')
+  const [liveShiftTime, setLiveShiftTime] = useState('00:00:00')
 
   const fetchAttendanceData = async () => {
     setLoading(true)
     setError('')
     try {
-      const [todayRes, historyRes] = await Promise.all([
+      const [todayRes, myRes] = await Promise.all([
         axios.get('/api/attendance/today'),
-        axios.get('/api/attendance/history')
+        axios.get('/api/attendance/my-history')
       ])
       setTodayAtt(todayRes.data)
-      setMyHistory(historyRes.data)
+      setMyHistory(myRes.data)
 
       if (isAdminOrHR) {
-        const params = {}
-        if (searchQuery) params.search = searchQuery
-        if (dateFilter) params.date_filter = dateFilter
-        const allRes = await axios.get('/api/attendance/admin/all', { params })
+        const allRes = await axios.get('/api/attendance/all', {
+          params: { date: selectedDate, search: searchQuery }
+        })
         setAllAttendance(allRes.data)
       }
     } catch (err) {
-      console.error('Failed to load attendance data:', err)
+      console.error('Failed to fetch attendance data:', err)
       setError('Failed to load attendance records.')
     } finally {
       setLoading(false)
@@ -62,7 +62,37 @@ export const AttendancePage = () => {
 
   useEffect(() => {
     fetchAttendanceData()
-  }, [searchQuery, dateFilter, isAdminOrHR])
+  }, [searchQuery, selectedDate, isAdminOrHR])
+
+  // Live timer interval ticker for active check in
+  useEffect(() => {
+    if (!todayAtt || !todayAtt.check_in || todayAtt.check_out) {
+      setLiveShiftTime('00:00:00')
+      return
+    }
+
+    const updateLiveTimer = () => {
+      try {
+        const formattedIso = todayAtt.check_in.includes('T') ? todayAtt.check_in : todayAtt.check_in.replace(' ', 'T')
+        const startTime = new Date(formattedIso).getTime()
+        const now = new Date().getTime()
+        const diffSeconds = Math.max(Math.floor((now - startTime) / 1000), 0)
+
+        const hours = Math.floor(diffSeconds / 3600)
+        const minutes = Math.floor((diffSeconds % 3600) / 60)
+        const seconds = diffSeconds % 60
+
+        const pad = (num) => String(num).padStart(2, '0')
+        setLiveShiftTime(`${pad(hours)}:${pad(minutes)}:${pad(seconds)}`)
+      } catch (e) {
+        setLiveShiftTime('00:00:00')
+      }
+    }
+
+    updateLiveTimer()
+    const timerId = setInterval(updateLiveTimer, 1000)
+    return () => clearInterval(timerId)
+  }, [todayAtt])
 
   const handleCheckIn = async () => {
     setActionLoading(true)
@@ -72,11 +102,12 @@ export const AttendancePage = () => {
       const res = await axios.post('/api/attendance/check-in', {})
       setTodayAtt(res.data)
       setSuccess('Successfully checked in for today!')
+      window.dispatchEvent(new Event('attendanceUpdated'))
       fetchAttendanceData()
       setTimeout(() => setSuccess(''), 4000)
     } catch (err) {
       setError(err.response?.data?.detail || 'Check in failed.')
-    } fontally: {
+    } finally {
       setActionLoading(false)
     }
   }
@@ -89,6 +120,7 @@ export const AttendancePage = () => {
       const res = await axios.post('/api/attendance/check-out', {})
       setTodayAtt(res.data)
       setSuccess('Successfully checked out! Work hours calculated.')
+      window.dispatchEvent(new Event('attendanceUpdated'))
       fetchAttendanceData()
       setTimeout(() => setSuccess(''), 4000)
     } catch (err) {
@@ -101,15 +133,22 @@ export const AttendancePage = () => {
   const formatTime = (isoString) => {
     if (!isoString) return '--:--'
     try {
-      const d = new Date(isoString)
-      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      const formattedIso = isoString.includes('T') ? isoString : isoString.replace(' ', 'T')
+      const d = new Date(formattedIso)
+      if (isNaN(d.getTime())) return isoString.slice(11, 16) || isoString
+      return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
     } catch (e) {
-      return isoString.slice(11, 16)
+      return isoString.slice(11, 16) || isoString
     }
   }
 
+  // Summary Calculations per Excalidraw Image 4
+  const daysPresent = myHistory.filter(h => h.status === 'Present').length
+  const leavesCount = myHistory.filter(h => h.status === 'Leave').length
+  const totalWorkingDays = myHistory.length || 22
+
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="flex min-h-screen bg-slate-50 text-slate-800">
       <Sidebar />
 
       <div className="flex-1 flex flex-col min-w-0">
@@ -130,9 +169,9 @@ export const AttendancePage = () => {
             </div>
           )}
 
-          {/* Admin / HR Tab Navigation */}
+          {/* Admin / HR Tab Toggle */}
           {isAdminOrHR && (
-            <div className="flex space-x-3 bg-white p-2 rounded-xl border border-slate-200 shadow-xs max-w-md">
+            <div className="flex space-x-3 bg-white p-1.5 rounded-xl border border-slate-200 max-w-md shadow-xs">
               <button
                 onClick={() => setActiveTab('my')}
                 className={`flex-1 py-2 text-xs font-bold rounded-lg transition ${
@@ -141,7 +180,7 @@ export const AttendancePage = () => {
                     : 'text-slate-600 hover:bg-slate-100'
                 }`}
               >
-                My Today's Punch & History
+                My Punch & History
               </button>
               <button
                 onClick={() => setActiveTab('all')}
@@ -151,198 +190,211 @@ export const AttendancePage = () => {
                     : 'text-slate-600 hover:bg-slate-100'
                 }`}
               >
-                All Employees Attendance
+                Admin Attendances List View
               </button>
             </div>
           )}
 
-          {activeTab === 'my' ? (
-            <>
-              {/* Check In / Check Out Card Banner */}
-              <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-6 text-white shadow-md border border-slate-800 flex flex-col md:flex-row items-center justify-between gap-6">
-                <div className="space-y-2 text-center md:text-left">
-                  <div className="flex items-center justify-center md:justify-start space-x-2">
-                    <CalendarCheck className="w-6 h-6 text-indigo-400" />
-                    <h2 className="text-xl font-extrabold tracking-tight">Today's Attendance Status</h2>
-                  </div>
-                  <p className="text-xs text-slate-300">
-                    Date: <strong className="text-white font-mono">{new Date().toISOString().split('T')[0]}</strong> • Status: {' '}
-                    <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-900/80 text-emerald-200 border border-emerald-700">
-                      {todayAtt ? todayAtt.status : 'Not Checked In'}
-                    </span>
-                  </p>
+          {/* Employee Summary Stats Bar per Excalidraw Image 4 */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-semibold text-slate-500">Count of days present</p>
+                <p className="text-2xl font-extrabold text-emerald-600 mt-0.5">{daysPresent} Days</p>
+              </div>
+              <div className="w-10 h-10 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center font-bold">
+                🟢
+              </div>
+            </div>
 
-                  <div className="flex items-center space-x-6 pt-2 text-xs text-slate-300">
-                    <div>
-                      <span className="text-slate-400">Check In Time: </span>
-                      <strong className="text-white font-mono text-sm">{todayAtt?.check_in ? formatTime(todayAtt.check_in) : '--:--'}</strong>
-                    </div>
-                    <div>
-                      <span className="text-slate-400">Check Out Time: </span>
-                      <strong className="text-white font-mono text-sm">{todayAtt?.check_out ? formatTime(todayAtt.check_out) : '--:--'}</strong>
-                    </div>
-                    <div>
-                      <span className="text-slate-400">Hours Logged: </span>
-                      <strong className="text-emerald-400 font-mono text-sm">{todayAtt ? `${todayAtt.work_hours} hrs` : '0.0 hrs'}</strong>
-                    </div>
-                  </div>
+            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-semibold text-slate-500">Leaves count</p>
+                <p className="text-2xl font-extrabold text-amber-600 mt-0.5">{leavesCount} Days</p>
+              </div>
+              <div className="w-10 h-10 rounded-lg bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center font-bold">
+                ✈️
+              </div>
+            </div>
+
+            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-semibold text-slate-500">Total working days</p>
+                <p className="text-2xl font-extrabold text-indigo-600 mt-0.5">{totalWorkingDays} Days</p>
+              </div>
+              <div className="w-10 h-10 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-600 flex items-center justify-center font-bold">
+                <CalendarIcon className="w-5 h-5" />
+              </div>
+            </div>
+
+            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-semibold text-slate-500">Today's Punch Status</p>
+                <p className="text-sm font-bold text-slate-800 mt-1">
+                  {todayAtt?.check_in ? (
+                    todayAtt.check_out ? (
+                      'Checked Out'
+                    ) : (
+                      <span className="text-emerald-600 font-mono flex items-center space-x-1">
+                        <span>Checked In</span>
+                        <span className="font-extrabold text-slate-900 ml-1">({liveShiftTime})</span>
+                      </span>
+                    )
+                  ) : (
+                    'Not Checked In'
+                  )}
+                </p>
+              </div>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={handleCheckIn}
+                  disabled={actionLoading || (todayAtt && !!todayAtt.check_in)}
+                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-30 text-white font-bold text-xs rounded-lg transition"
+                >
+                  Check IN
+                </button>
+                <button
+                  onClick={handleCheckOut}
+                  disabled={actionLoading || !todayAtt || !todayAtt.check_in || (todayAtt && !!todayAtt.check_out)}
+                  className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 disabled:opacity-30 text-white font-bold text-xs rounded-lg transition"
+                >
+                  Check Out
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {activeTab === 'my' ? (
+            /* Employee Attendance View per Excalidraw Image 4 */
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+              <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+                <h3 className="font-bold text-slate-800 text-sm flex items-center">
+                  <Clock className="w-4 h-4 mr-2 text-indigo-600" /> Attendance Log History
+                </h3>
+                <span className="text-xs text-slate-500 font-mono">Date Range: {selectedDate}</span>
+              </div>
+
+              {loading ? (
+                <div className="p-8 text-center text-xs text-slate-500">Loading attendance history...</div>
+              ) : myHistory.length === 0 ? (
+                <div className="p-8 text-center text-xs text-slate-500">No attendance records found.</div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs text-slate-600">
+                    <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200 uppercase">
+                      <tr>
+                        <th className="py-3.5 px-4">Date</th>
+                        <th className="py-3.5 px-4">Check In</th>
+                        <th className="py-3.5 px-4">Check Out</th>
+                        <th className="py-3.5 px-4">Work Hours</th>
+                        <th className="py-3.5 px-4">Extra hours</th>
+                        <th className="py-3.5 px-4">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 font-mono">
+                      {myHistory.map(row => (
+                        <tr key={row.id} className="hover:bg-slate-50 transition">
+                          <td className="py-3 px-4 font-bold text-slate-900">{row.date}</td>
+                          <td className="py-3 px-4 text-emerald-600 font-bold">{formatTime(row.check_in)}</td>
+                          <td className="py-3 px-4 text-rose-600 font-bold">{formatTime(row.check_out)}</td>
+                          <td className="py-3 px-4 font-bold text-slate-800">{row.work_hours} hrs</td>
+                          <td className="py-3 px-4 text-indigo-600">{row.extra_hours > 0 ? `+${row.extra_hours} hrs` : '0.0 hrs'}</td>
+                          <td className="py-3 px-4">
+                            <span className={`px-2.5 py-1 rounded-full text-[10px] font-sans font-bold ${
+                              row.status === 'Present' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                              row.status === 'Leave' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+                              'bg-rose-50 text-rose-700 border border-rose-200'
+                            }`}>
+                              {row.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          ) : (
+            /* Admin / HR Officer Attendance List View per Excalidraw Image 3 */
+            <div className="space-y-4">
+              {/* Date Controls & Searchbar */}
+              <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => {
+                      const d = new Date(selectedDate)
+                      d.setDate(d.getDate() - 1)
+                      setSelectedDate(d.toISOString().split('T')[0])
+                    }}
+                    className="p-2 bg-slate-100 border border-slate-200 rounded-lg hover:bg-slate-200 transition"
+                  >
+                    <ChevronLeft className="w-4 h-4 text-slate-600" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      const d = new Date(selectedDate)
+                      d.setDate(d.getDate() + 1)
+                      setSelectedDate(d.toISOString().split('T')[0])
+                    }}
+                    className="p-2 bg-slate-100 border border-slate-200 rounded-lg hover:bg-slate-200 transition"
+                  >
+                    <ChevronRight className="w-4 h-4 text-slate-600" />
+                  </button>
+                  <input
+                    type="date"
+                    value={selectedDate}
+                    onChange={e => setSelectedDate(e.target.value)}
+                    className="px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-mono text-slate-800 focus:ring-2 focus:ring-indigo-500"
+                  />
                 </div>
 
-                <div className="flex items-center space-x-4 flex-shrink-0">
-                  <button
-                    onClick={handleCheckIn}
-                    disabled={actionLoading || (todayAtt && !!todayAtt.check_in)}
-                    className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white font-bold text-sm rounded-xl shadow-lg flex items-center space-x-2 transition border border-emerald-500"
-                  >
-                    <LogIn className="w-5 h-5" />
-                    <span>Check In</span>
-                  </button>
-
-                  <button
-                    onClick={handleCheckOut}
-                    disabled={actionLoading || !todayAtt || !todayAtt.check_in || (todayAtt && !!todayAtt.check_out)}
-                    className="px-6 py-3 bg-rose-600 hover:bg-rose-700 disabled:opacity-40 text-white font-bold text-sm rounded-xl shadow-lg flex items-center space-x-2 transition border border-rose-500"
-                  >
-                    <LogOut className="w-5 h-5" />
-                    <span>Check Out</span>
-                  </button>
+                <div className="relative w-full sm:w-72">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    placeholder="Searchbar..."
+                    className="w-full pl-9 pr-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
                 </div>
               </div>
 
-              {/* Personal Attendance History Table */}
+              {/* Attendances List View Table per Excalidraw Image 3 */}
               <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
                 <div className="p-4 border-b border-slate-100 flex items-center justify-between">
-                  <h3 className="font-bold text-slate-800 text-sm flex items-center">
-                    <Clock className="w-4 h-4 mr-2 text-indigo-600" /> My Attendance History
-                  </h3>
-                  <button onClick={fetchAttendanceData} className="p-1 text-slate-400 hover:text-slate-600">
-                    <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                  </button>
+                  <h3 className="font-bold text-slate-800 text-sm">Attendances List view — For Admin/HR Officer</h3>
+                  <span className="text-xs text-slate-500 font-mono">Date: {selectedDate}</span>
                 </div>
 
                 {loading ? (
-                  <div className="p-8 text-center text-xs text-slate-500">Loading history...</div>
-                ) : myHistory.length === 0 ? (
-                  <div className="p-8 text-center text-xs text-slate-500">No attendance records found yet.</div>
+                  <div className="p-8 text-center text-xs text-slate-500">Loading company attendances...</div>
+                ) : allAttendance.length === 0 ? (
+                  <div className="p-8 text-center text-xs text-slate-500">No attendance records found for this date.</div>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-xs text-slate-600">
-                      <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200 uppercase tracking-wider">
+                      <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
                         <tr>
-                          <th className="py-3.5 px-4">Date</th>
+                          <th className="py-3.5 px-4">Emp</th>
                           <th className="py-3.5 px-4">Check In</th>
                           <th className="py-3.5 px-4">Check Out</th>
                           <th className="py-3.5 px-4">Work Hours</th>
-                          <th className="py-3.5 px-4">Extra Hours</th>
-                          <th className="py-3.5 px-4">Status</th>
+                          <th className="py-3.5 px-4">Extra hours</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 font-mono">
-                        {myHistory.map(row => (
-                          <tr key={row.id} className="hover:bg-slate-50 transition">
-                            <td className="py-3 px-4 font-bold text-slate-800">{row.date}</td>
-                            <td className="py-3 px-4 text-emerald-700">{formatTime(row.check_in)}</td>
-                            <td className="py-3 px-4 text-rose-700">{formatTime(row.check_out)}</td>
-                            <td className="py-3 px-4 font-bold text-slate-800">{row.work_hours} hrs</td>
-                            <td className="py-3 px-4 text-indigo-600">{row.extra_hours > 0 ? `+${row.extra_hours} hrs` : '0.0 hrs'}</td>
-                            <td className="py-3 px-4">
-                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-sans font-bold ${
-                                row.status === 'Present' ? 'bg-emerald-100 text-emerald-800' :
-                                row.status === 'Leave' ? 'bg-amber-100 text-amber-800' :
-                                'bg-rose-100 text-rose-800'
-                              }`}>
-                                {row.status}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            </>
-          ) : (
-            /* Admin All Attendance View */
-            <div className="space-y-6">
-              {/* Admin Search & Date Filter Bar */}
-              <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div className="flex items-center space-x-3 w-full sm:w-auto">
-                  <span className="text-xs font-semibold text-slate-500 flex items-center">
-                    <Filter className="w-4 h-4 mr-1 text-slate-400" /> Filter Date:
-                  </span>
-                  <input
-                    type="date"
-                    value={dateFilter}
-                    onChange={e => setDateFilter(e.target.value)}
-                    className="px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-lg text-xs font-mono focus:ring-2 focus:ring-indigo-500"
-                  />
-                  {dateFilter && (
-                    <button
-                      onClick={() => setDateFilter('')}
-                      className="text-xs text-indigo-600 font-semibold hover:underline"
-                    >
-                      Clear Date
-                    </button>
-                  )}
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <span className="text-xs font-bold text-slate-500">Total Logs: {allAttendance.length}</span>
-                  <button onClick={fetchAttendanceData} className="p-2 bg-slate-100 hover:bg-slate-200 rounded-lg transition">
-                    <RefreshCw className={`w-4 h-4 text-slate-600 ${loading ? 'animate-spin' : ''}`} />
-                  </button>
-                </div>
-              </div>
-
-              {/* Company Attendance Table */}
-              <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-                <div className="p-4 border-b border-slate-100">
-                  <h3 className="font-bold text-slate-800 text-sm flex items-center">
-                    <Users className="w-4 h-4 mr-2 text-indigo-600" /> Company Attendance Logs
-                  </h3>
-                </div>
-
-                {loading ? (
-                  <div className="p-8 text-center text-xs text-slate-500">Loading company logs...</div>
-                ) : allAttendance.length === 0 ? (
-                  <div className="p-8 text-center text-xs text-slate-500">No attendance logs matching search criteria.</div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs text-slate-600">
-                      <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200 uppercase tracking-wider">
-                        <tr>
-                          <th className="py-3.5 px-4">Employee</th>
-                          <th className="py-3.5 px-4">Emp Code</th>
-                          <th className="py-3.5 px-4">Department</th>
-                          <th className="py-3.5 px-4">Date</th>
-                          <th className="py-3.5 px-4">Check In</th>
-                          <th className="py-3.5 px-4">Check Out</th>
-                          <th className="py-3.5 px-4">Work Hours</th>
-                          <th className="py-3.5 px-4">Extra Hours</th>
-                          <th className="py-3.5 px-4">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
                         {allAttendance.map(row => (
                           <tr key={row.id} className="hover:bg-slate-50 transition">
-                            <td className="py-3 px-4 font-bold text-slate-800">{row.employee_name}</td>
-                            <td className="py-3 px-4 font-mono font-semibold text-indigo-600">{row.emp_code}</td>
-                            <td className="py-3 px-4 text-slate-700">{row.department}</td>
-                            <td className="py-3 px-4 font-mono font-semibold text-slate-800">{row.date}</td>
-                            <td className="py-3 px-4 font-mono text-emerald-700">{formatTime(row.check_in)}</td>
-                            <td className="py-3 px-4 font-mono text-rose-700">{formatTime(row.check_out)}</td>
-                            <td className="py-3 px-4 font-mono font-bold text-slate-800">{row.work_hours} hrs</td>
-                            <td className="py-3 px-4 font-mono text-indigo-600">{row.extra_hours > 0 ? `+${row.extra_hours} hrs` : '0.0 hrs'}</td>
-                            <td className="py-3 px-4">
-                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                row.status === 'Present' ? 'bg-emerald-100 text-emerald-800' :
-                                row.status === 'Leave' ? 'bg-amber-100 text-amber-800' :
-                                'bg-rose-100 text-rose-800'
-                              }`}>
-                                {row.status}
-                              </span>
+                            <td className="py-3 px-4 font-bold text-slate-900 font-sans">
+                              {row.employee_name}
+                              <span className="block text-[10px] text-slate-400 font-mono">{row.emp_code}</span>
                             </td>
+                            <td className="py-3 px-4 text-emerald-600 font-bold">{formatTime(row.check_in)}</td>
+                            <td className="py-3 px-4 text-rose-600 font-bold">{formatTime(row.check_out)}</td>
+                            <td className="py-3 px-4 font-bold text-slate-800">{row.work_hours} hrs</td>
+                            <td className="py-3 px-4 text-indigo-600">{row.extra_hours > 0 ? `+${row.extra_hours} hrs` : '0.0 hrs'}</td>
                           </tr>
                         ))}
                       </tbody>

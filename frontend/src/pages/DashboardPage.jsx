@@ -13,7 +13,9 @@ import {
   Calendar,
   UserPlus,
   Filter,
-  RefreshCw
+  RefreshCw,
+  Sparkles,
+  Briefcase
 } from 'lucide-react'
 
 export const DashboardPage = () => {
@@ -76,7 +78,6 @@ export const DashboardPage = () => {
     setIsFormModalOpen(true)
   }
 
-  // Filter employees locally by search & department
   const filteredEmployees = employees.filter(emp => {
     const matchesSearch =
       !searchQuery ||
@@ -94,7 +95,7 @@ export const DashboardPage = () => {
   const departments = ['All', 'Engineering', 'Human Resources', 'Design', 'Marketing', 'Finance', 'Executive']
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="flex min-h-screen bg-slate-50 text-slate-800">
       <Sidebar />
 
       <div className="flex-1 flex flex-col min-w-0">

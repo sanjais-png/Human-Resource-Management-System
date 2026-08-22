@@ -1,10 +1,23 @@
-*.db
-*.sqlite
-*.sqlite3
-.env
-venv/
-.venv/
-node_modules/
+# Python / Virtual Environment
 __pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+ENV/
+*.sqlite3
+*.db
+
+# Node / React
+node_modules/
 dist/
-.pytest_cache/
+dist-ssr/
+*.local
+.env
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

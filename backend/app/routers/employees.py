@@ -16,26 +16,40 @@ from app.auth import get_current_user, require_role, get_password_hash
 
 router = APIRouter(prefix="/api", tags=["Employee Management"])
 
-def generate_emp_code(db: Session) -> str:
+def generate_emp_code(db: Session, first_name: str = "John", last_name: str = "Doe", company: str = "Dayflow Corp", date_of_joining: str = "2026-01-15") -> str:
+    # Format: [Company Prefix (2 letters)][First 2 of First Name][First 2 of Last Name][Year of Joining (4 digits)][4-digit Serial Number]
+    # Example: OIJODO20220001
+    clean_company = re.sub(r'[^a-zA-Z]', '', company.strip().upper())
+    comp_prefix = clean_company[:2] if len(clean_company) >= 2 else (clean_company + "X")[:2]
+    if not comp_prefix:
+        comp_prefix = "DF"
+
+    clean_fn = re.sub(r'[^a-zA-Z]', '', first_name.strip().upper())
+    fn_part = clean_fn[:2] if len(clean_fn) >= 2 else (clean_fn + "X")[:2]
+
+    clean_ln = re.sub(r'[^a-zA-Z]', '', last_name.strip().upper())
+    ln_part = clean_ln[:2] if len(clean_ln) >= 2 else (clean_ln + "X")[:2]
+
+    year = "2026"
+    if date_of_joining and len(date_of_joining) >= 4:
+        year_match = re.search(r'\d{4}', date_of_joining)
+        if year_match:
+            year = year_match.group(0)
+
+    prefix = f"{comp_prefix}{fn_part}{ln_part}{year}"
+
     count = db.query(Employee).count()
-    new_num = count + 1
-    code = f"EMP{new_num:03d}"
+    serial = count + 1
+    code = f"{prefix}{serial:04d}"
+
     while db.query(Employee).filter(Employee.emp_code == code).first():
-        new_num += 1
-        code = f"EMP{new_num:03d}"
+        serial += 1
+        code = f"{prefix}{serial:04d}"
+
     return code
 
-def generate_login_id(db: Session, first_name: str, last_name: str) -> str:
-    clean_first = re.sub(r'[^a-zA-Z0-9]', '', first_name.strip().lower())
-    clean_last = re.sub(r'[^a-zA-Z0-9]', '', last_name.strip().lower())
-    base_id = f"{clean_first}.{clean_last}"
-    
-    login_id = base_id
-    counter = 1
-    while db.query(Employee).filter(Employee.login_id == login_id).first():
-        counter += 1
-        login_id = f"{base_id}{counter}"
-    return login_id
+def generate_login_id(db: Session, first_name: str = "John", last_name: str = "Doe", company: str = "Dayflow Corp", date_of_joining: str = "2026-01-15") -> str:
+    return generate_emp_code(db, first_name=first_name, last_name=last_name, company=company, date_of_joining=date_of_joining)
 
 @router.get("/dashboard/stats", response_model=DashboardStats)
 def get_dashboard_stats(
@@ -104,8 +118,14 @@ def create_employee(
             detail=f"Employee with email '{emp_data.email}' already exists"
         )
 
-    emp_code = generate_emp_code(db)
-    login_id = generate_login_id(db, emp_data.first_name, emp_data.last_name)
+    emp_code = emp_data.emp_code if emp_data.emp_code else generate_emp_code(
+        db,
+        first_name=emp_data.first_name,
+        last_name=emp_data.last_name,
+        company=emp_data.company,
+        date_of_joining=emp_data.date_of_joining
+    )
+    login_id = emp_code
 
     created_user_id = None
     if emp_data.create_user:

@@ -41,7 +41,9 @@ def update_my_profile(
     # Allowed self-service update fields for Employees
     allowed_self_fields = {
         "phone", "address", "personal_email", "skills", "resume_summary",
-        "marital_status", "date_of_birth", "gender", "nationality"
+        "marital_status", "date_of_birth", "gender", "nationality",
+        "what_i_love", "hobbies", "certifications", "bank_name", "account_number",
+        "ifsc_code", "pan_number", "uan_number"
     }
 
     update_data = profile_update.model_dump(exclude_unset=True)

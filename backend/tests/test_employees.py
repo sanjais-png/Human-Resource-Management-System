@@ -114,8 +114,8 @@ def test_admin_and_hr_can_create_employee():
     assert res.status_code == 201
     data = res.json()
     assert data["first_name"] == "Alice"
-    assert data["emp_code"] == "EMP002"
-    assert data["login_id"] == "alice.smith"
+    assert "ALSM" in data["emp_code"]
+    assert len(data["emp_code"]) >= 12
 
 def test_employee_cannot_create_employee():
     emp_token = get_token("regular_emp_test@hrms.com")

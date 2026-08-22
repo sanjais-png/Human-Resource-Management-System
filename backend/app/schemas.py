@@ -12,6 +12,28 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password: str
 
+class SignUpRequest(BaseModel):
+    emp_code: Optional[str] = None
+    first_name: str
+    last_name: str
+    email: str
+    password: str
+    role: UserRole = UserRole.EMPLOYEE
+    department: Optional[str] = "General"
+    job_position: Optional[str] = "Staff"
+    otp_code: Optional[str] = None
+
+class SendOTPRequest(BaseModel):
+    email: str
+
+class VerifyOTPRequest(BaseModel):
+    email: str
+    otp_code: str
+
+class OTPResponse(BaseModel):
+    message: str
+    otp_code: Optional[str] = None
+
 class UserResponse(UserBase):
     id: int
     created_at: datetime
@@ -40,22 +62,29 @@ class EmployeeBase(BaseModel):
     department: str = "General"
     job_position: str = "Staff"
     manager_name: Optional[str] = None
-    company: str = "HRMS Corp"
+    company: str = "Dayflow Corp"
     location: str = "Headquarters"
     date_of_joining: str = "2026-01-15"
-    status: str = "Present"
-    date_of_birth: Optional[str] = "1995-05-20"
-    gender: Optional[str] = "Male"
-    nationality: Optional[str] = "Indian"
-    marital_status: Optional[str] = "Single"
-    address: Optional[str] = "123 Technology Boulevard, Tech Park"
+    status: str = "Absent"
+    date_of_birth: Optional[str] = None
+    gender: Optional[str] = None
+    nationality: Optional[str] = None
+    marital_status: Optional[str] = None
+    address: Optional[str] = None
     personal_email: Optional[str] = None
-    pan_number: Optional[str] = "ABCDE1234F"
-    uan_number: Optional[str] = "100908070605"
-    skills: Optional[str] = "Python, React, FastAPI, SQL, Tailwind CSS"
-    resume_summary: Optional[str] = "Experienced professional specializing in software architecture, web development, and team collaboration."
+    pan_number: Optional[str] = None
+    uan_number: Optional[str] = None
+    bank_name: Optional[str] = None
+    account_number: Optional[str] = None
+    ifsc_code: Optional[str] = None
+    skills: Optional[str] = None
+    resume_summary: Optional[str] = None
+    what_i_love: Optional[str] = None
+    hobbies: Optional[str] = None
+    certifications: Optional[str] = None
 
 class EmployeeCreate(EmployeeBase):
+    emp_code: Optional[str] = None
     role: UserRole = UserRole.EMPLOYEE
     create_user: bool = True
     password: Optional[str] = "emp123456"
@@ -80,8 +109,14 @@ class EmployeeUpdate(BaseModel):
     personal_email: Optional[str] = None
     pan_number: Optional[str] = None
     uan_number: Optional[str] = None
+    bank_name: Optional[str] = None
+    account_number: Optional[str] = None
+    ifsc_code: Optional[str] = None
     skills: Optional[str] = None
     resume_summary: Optional[str] = None
+    what_i_love: Optional[str] = None
+    hobbies: Optional[str] = None
+    certifications: Optional[str] = None
 
 class EmployeeResponse(EmployeeBase):
     id: int
@@ -154,8 +189,9 @@ class TimeOffRequestResponse(BaseModel):
 
 class TimeOffReviewRequest(BaseModel):
     status: str  # "APPROVED" or "REJECTED"
+    comments: Optional[str] = None
 
-# Salary Schemas (ADMIN ONLY)
+# Salary Schemas
 class SalaryComponent(BaseModel):
     name: str
     rule: str

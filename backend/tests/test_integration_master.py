@@ -159,9 +159,9 @@ def test_workflow_hr_complete_pass():
     assert approve_res.status_code == 200
     assert approve_res.json()["status"] == "APPROVED"
 
-    # 5. Salary Access Denied for HR
-    sal_denied = client.get(f"/api/salary/{target_emp_id}", headers=headers)
-    assert sal_denied.status_code == 403
+    # 5. Salary Update Denied for HR (Admin Only)
+    sal_update_denied = client.put(f"/api/salary/{target_emp_id}", json={"monthly_wage": 150000.0}, headers=headers)
+    assert sal_update_denied.status_code == 403
 
 def test_workflow_employee_complete_pass():
     # 1. Employee Login
@@ -182,6 +182,6 @@ def test_workflow_employee_complete_pass():
     hist_res = client.get("/api/attendance/history", headers=headers)
     assert hist_res.status_code == 200
 
-    # 5. Salary Access Denied for Employee
-    sal_denied = client.get("/api/salary/1", headers=headers)
-    assert sal_denied.status_code == 403
+    # 5. Accessing other employee's salary is denied for Employee
+    sal_other_denied = client.get("/api/salary/1", headers=headers)
+    assert sal_other_denied.status_code == 403
