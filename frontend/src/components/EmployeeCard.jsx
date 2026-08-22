@@ -1,7 +1,10 @@
 import React from 'react'
-import { Building2, Briefcase, Mail, Phone, Edit2, Eye, MapPin } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Building2, Briefcase, Mail, Edit2, Eye, MapPin } from 'lucide-react'
 
 export const EmployeeCard = ({ employee, onView, onEdit, canManage }) => {
+  const navigate = useNavigate()
+
   const getStatusBadge = (status) => {
     switch (status) {
       case 'Present':
@@ -14,18 +17,26 @@ export const EmployeeCard = ({ employee, onView, onEdit, canManage }) => {
     }
   }
 
+  const handleProfileClick = () => {
+    if (onView) {
+      onView(employee)
+    } else {
+      navigate(`/profile/${employee.id}`)
+    }
+  }
+
   return (
     <div className="bg-white rounded-xl shadow-xs border border-slate-200 hover:shadow-md transition-shadow p-5 flex flex-col justify-between">
       <div>
         <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-3 cursor-pointer" onClick={() => navigate(`/profile/${employee.id}`)}>
             <img
               src={employee.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(employee.first_name + ' ' + employee.last_name)}&background=6366f1&color=fff`}
               alt={`${employee.first_name} ${employee.last_name}`}
-              className="w-12 h-12 rounded-full border border-indigo-100 object-cover shadow-xs"
+              className="w-12 h-12 rounded-full border border-indigo-100 object-cover shadow-xs hover:border-indigo-500 transition"
             />
             <div>
-              <h3 className="font-bold text-slate-800 text-base leading-tight">
+              <h3 className="font-bold text-slate-800 text-base leading-tight hover:text-indigo-600 transition">
                 {employee.first_name} {employee.last_name}
               </h3>
               <p className="text-xs text-indigo-600 font-semibold mt-0.5">{employee.emp_code}</p>
@@ -56,14 +67,14 @@ export const EmployeeCard = ({ employee, onView, onEdit, canManage }) => {
 
       <div className="flex items-center space-x-2 pt-3 border-t border-slate-100">
         <button
-          onClick={() => onView(employee)}
-          className="flex-1 flex items-center justify-center space-x-1.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition"
+          onClick={() => navigate(`/profile/${employee.id}`)}
+          className="flex-1 flex items-center justify-center space-x-1.5 py-1.5 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-700 text-xs font-semibold rounded-lg border border-slate-200 transition"
         >
           <Eye className="w-3.5 h-3.5" />
           <span>View Profile</span>
         </button>
 
-        {canManage && (
+        {canManage && onEdit && (
           <button
             onClick={() => onEdit(employee)}
             className="flex items-center justify-center p-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold rounded-lg border border-indigo-200 transition"

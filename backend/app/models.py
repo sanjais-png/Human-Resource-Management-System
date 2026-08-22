@@ -1,6 +1,6 @@
 import enum
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Enum, ForeignKey
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Enum, ForeignKey, Text
 from sqlalchemy.orm import relationship
 from app.database import Base
 
@@ -44,6 +44,21 @@ class Employee(Base):
     date_of_joining = Column(String, nullable=False, default="2026-01-15")
     avatar_url = Column(String, nullable=True)
     status = Column(String, nullable=False, default="Present")  # Present, Absent, Leave
+
+    # Private & Personal Profile Information
+    date_of_birth = Column(String, nullable=True, default="1995-05-20")
+    gender = Column(String, nullable=True, default="Male")
+    nationality = Column(String, nullable=True, default="Indian")
+    marital_status = Column(String, nullable=True, default="Single")
+    address = Column(String, nullable=True, default="123 Technology Boulevard, Tech Park")
+    personal_email = Column(String, nullable=True)
+    pan_number = Column(String, nullable=True, default="ABCDE1234F")
+    uan_number = Column(String, nullable=True, default="100908070605")
+
+    # Skills & Resume Summary
+    skills = Column(String, nullable=True, default="Python, React, FastAPI, SQL, Tailwind CSS")
+    resume_summary = Column(Text, nullable=True, default="Experienced professional specializing in software architecture, web development, and team collaboration.")
+
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     user = relationship("User", back_populates="employee")

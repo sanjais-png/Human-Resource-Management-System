@@ -44,6 +44,16 @@ class EmployeeBase(BaseModel):
     location: str = "Headquarters"
     date_of_joining: str = "2026-01-15"
     status: str = "Present"
+    date_of_birth: Optional[str] = "1995-05-20"
+    gender: Optional[str] = "Male"
+    nationality: Optional[str] = "Indian"
+    marital_status: Optional[str] = "Single"
+    address: Optional[str] = "123 Technology Boulevard, Tech Park"
+    personal_email: Optional[str] = None
+    pan_number: Optional[str] = "ABCDE1234F"
+    uan_number: Optional[str] = "100908070605"
+    skills: Optional[str] = "Python, React, FastAPI, SQL, Tailwind CSS"
+    resume_summary: Optional[str] = "Experienced professional specializing in software architecture, web development, and team collaboration."
 
 class EmployeeCreate(EmployeeBase):
     role: UserRole = UserRole.EMPLOYEE
@@ -62,6 +72,16 @@ class EmployeeUpdate(BaseModel):
     location: Optional[str] = None
     date_of_joining: Optional[str] = None
     status: Optional[str] = None
+    date_of_birth: Optional[str] = None
+    gender: Optional[str] = None
+    nationality: Optional[str] = None
+    marital_status: Optional[str] = None
+    address: Optional[str] = None
+    personal_email: Optional[str] = None
+    pan_number: Optional[str] = None
+    uan_number: Optional[str] = None
+    skills: Optional[str] = None
+    resume_summary: Optional[str] = None
 
 class EmployeeResponse(EmployeeBase):
     id: int

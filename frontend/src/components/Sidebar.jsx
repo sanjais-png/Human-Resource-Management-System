@@ -4,18 +4,15 @@ import { useAuth } from '../context/AuthContext'
 import {
   LayoutDashboard,
   Users,
+  User,
   CalendarCheck,
   Clock,
   DollarSign,
-  Building2,
-  ShieldAlert
+  Building2
 } from 'lucide-react'
 
 export const Sidebar = () => {
   const { user } = useAuth()
-  const isAdmin = user?.role === 'ADMIN'
-  const isHR = user?.role === 'HR'
-  const canManageSalary = isAdmin
 
   const navItems = [
     {
@@ -28,6 +25,12 @@ export const Sidebar = () => {
       name: 'Employees',
       path: '/employees',
       icon: Users,
+      roles: ['ADMIN', 'HR', 'EMPLOYEE']
+    },
+    {
+      name: 'My Profile',
+      path: '/profile/me',
+      icon: User,
       roles: ['ADMIN', 'HR', 'EMPLOYEE']
     },
     {
