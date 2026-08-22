@@ -6,6 +6,8 @@ import { DashboardPage } from './pages/DashboardPage'
 import { EmployeesPage } from './pages/EmployeesPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { AttendancePage } from './pages/AttendancePage'
+import { TimeOffPage } from './pages/TimeOffPage'
+import { SalaryPage } from './pages/SalaryPage'
 import { ProtectedRoute } from './components/ProtectedRoute'
 
 function App() {
@@ -51,6 +53,22 @@ function App() {
             element={
               <ProtectedRoute>
                 <AttendancePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/time-off"
+            element={
+              <ProtectedRoute>
+                <TimeOffPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/salary"
+            element={
+              <ProtectedRoute>
+                <SalaryPage />
               </ProtectedRoute>
             }
           />

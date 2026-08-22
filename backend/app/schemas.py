@@ -119,4 +119,65 @@ class AttendanceResponse(AttendanceBase):
     model_config = ConfigDict(from_attributes=True)
 
 class AttendanceActionRequest(BaseModel):
-    date: Optional[str] = None  # YYYY-MM-DD (defaults to today)
+    date: Optional[str] = None
+
+# Time Off Schemas
+class LeaveBalanceResponse(BaseModel):
+    paid_time_off: float
+    sick_leave: float
+    unpaid_leave: float
+
+    model_config = ConfigDict(from_attributes=True)
+
+class TimeOffRequestCreate(BaseModel):
+    leave_type: str  # "Paid Time Off", "Sick Leave", "Unpaid Leave"
+    start_date: str  # "YYYY-MM-DD"
+    end_date: str    # "YYYY-MM-DD"
+    reason: str
+
+class TimeOffRequestResponse(BaseModel):
+    id: int
+    employee_id: int
+    leave_type: str
+    start_date: str
+    end_date: str
+    duration_days: float
+    reason: str
+    status: str
+    reviewed_by: Optional[str] = None
+    employee_name: Optional[str] = None
+    emp_code: Optional[str] = None
+    department: Optional[str] = None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+class TimeOffReviewRequest(BaseModel):
+    status: str  # "APPROVED" or "REJECTED"
+
+# Salary Schemas (ADMIN ONLY)
+class SalaryComponent(BaseModel):
+    name: str
+    rule: str
+    monthly: float
+    annual: float
+    formatted_monthly: str
+    formatted_annual: str
+
+class SalaryBreakdownResponse(BaseModel):
+    employee_id: int
+    emp_code: str
+    employee_name: str
+    monthly_wage: float
+    annual_wage: float
+    formatted_monthly_wage: str
+    formatted_annual_wage: str
+    components: List[SalaryComponent]
+    total_deductions_monthly: float
+    net_monthly_pay: float
+    formatted_net_monthly_pay: str
+    net_annual_pay: float
+    formatted_net_annual_pay: str
+
+class SalaryUpdateRequest(BaseModel):
+    monthly_wage: float

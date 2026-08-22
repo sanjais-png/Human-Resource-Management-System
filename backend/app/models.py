@@ -43,9 +43,8 @@ class Employee(Base):
     location = Column(String, nullable=False, default="Headquarters")
     date_of_joining = Column(String, nullable=False, default="2026-01-15")
     avatar_url = Column(String, nullable=True)
-    status = Column(String, nullable=False, default="Present")  # Present, Absent, Leave
+    status = Column(String, nullable=False, default="Present")
 
-    # Private & Personal Profile Information
     date_of_birth = Column(String, nullable=True, default="1995-05-20")
     gender = Column(String, nullable=True, default="Male")
     nationality = Column(String, nullable=True, default="Indian")
@@ -55,7 +54,6 @@ class Employee(Base):
     pan_number = Column(String, nullable=True, default="ABCDE1234F")
     uan_number = Column(String, nullable=True, default="100908070605")
 
-    # Skills & Resume Summary
     skills = Column(String, nullable=True, default="Python, React, FastAPI, SQL, Tailwind CSS")
     resume_summary = Column(Text, nullable=True, default="Experienced professional specializing in software architecture, web development, and team collaboration.")
 
@@ -63,6 +61,9 @@ class Employee(Base):
 
     user = relationship("User", back_populates="employee")
     attendances = relationship("Attendance", back_populates="employee", cascade="all, delete-orphan")
+    leave_balance = relationship("LeaveBalance", back_populates="employee", uselist=False, cascade="all, delete-orphan")
+    time_off_requests = relationship("TimeOffRequest", back_populates="employee", cascade="all, delete-orphan")
+    salary_info = relationship("SalaryInformation", back_populates="employee", uselist=False, cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<Employee {self.emp_code}: {self.first_name} {self.last_name}>"
@@ -72,12 +73,12 @@ class Attendance(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     employee_id = Column(Integer, ForeignKey("employees.id"), nullable=False, index=True)
-    date = Column(String, nullable=False, index=True)  # YYYY-MM-DD
-    check_in = Column(String, nullable=True)  # ISO timestamp
-    check_out = Column(String, nullable=True)  # ISO timestamp
+    date = Column(String, nullable=False, index=True)
+    check_in = Column(String, nullable=True)
+    check_out = Column(String, nullable=True)
     work_hours = Column(Float, default=0.0, nullable=False)
     extra_hours = Column(Float, default=0.0, nullable=False)
-    status = Column(String, default="Present", nullable=False)  # Present, Absent, Leave, Half Day
+    status = Column(String, default="Present", nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     employee = relationship("Employee", back_populates="attendances")
@@ -86,5 +87,39 @@ class Attendance(Base):
         UniqueConstraint('employee_id', 'date', name='_emp_date_uc'),
     )
 
-    def __repr__(self):
-        return f"<Attendance emp={self.employee_id} date={self.date} status={self.status}>"
+class LeaveBalance(Base):
+    __tablename__ = "leave_balances"
+
+    id = Column(Integer, primary_key=True, index=True)
+    employee_id = Column(Integer, ForeignKey("employees.id"), unique=True, nullable=False, index=True)
+    paid_time_off = Column(Float, default=24.0, nullable=False)
+    sick_leave = Column(Float, default=7.0, nullable=False)
+    unpaid_leave = Column(Float, default=0.0, nullable=False)
+
+    employee = relationship("Employee", back_populates="leave_balance")
+
+class TimeOffRequest(Base):
+    __tablename__ = "time_off_requests"
+
+    id = Column(Integer, primary_key=True, index=True)
+    employee_id = Column(Integer, ForeignKey("employees.id"), nullable=False, index=True)
+    leave_type = Column(String, nullable=False)  # Paid Time Off, Sick Leave, Unpaid Leave
+    start_date = Column(String, nullable=False)  # YYYY-MM-DD
+    end_date = Column(String, nullable=False)    # YYYY-MM-DD
+    duration_days = Column(Float, nullable=False)
+    reason = Column(String, nullable=False)
+    status = Column(String, default="PENDING", nullable=False)  # PENDING, APPROVED, REJECTED
+    reviewed_by = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    employee = relationship("Employee", back_populates="time_off_requests")
+
+class SalaryInformation(Base):
+    __tablename__ = "salary_informations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    employee_id = Column(Integer, ForeignKey("employees.id"), unique=True, nullable=False, index=True)
+    monthly_wage = Column(Float, default=100000.0, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    employee = relationship("Employee", back_populates="salary_info")
