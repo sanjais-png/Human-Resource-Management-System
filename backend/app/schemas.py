@@ -98,3 +98,25 @@ class DashboardStats(BaseModel):
     present_today: int
     absent_today: int
     on_leave: int
+
+# Attendance Schemas
+class AttendanceBase(BaseModel):
+    date: str
+    check_in: Optional[str] = None
+    check_out: Optional[str] = None
+    work_hours: float = 0.0
+    extra_hours: float = 0.0
+    status: str = "Present"
+
+class AttendanceResponse(AttendanceBase):
+    id: int
+    employee_id: int
+    employee_name: Optional[str] = None
+    emp_code: Optional[str] = None
+    department: Optional[str] = None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+class AttendanceActionRequest(BaseModel):
+    date: Optional[str] = None  # YYYY-MM-DD (defaults to today)

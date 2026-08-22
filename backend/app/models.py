@@ -1,6 +1,6 @@
 import enum
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Enum, ForeignKey, Text
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Enum, ForeignKey, Float, Text, UniqueConstraint
 from sqlalchemy.orm import relationship
 from app.database import Base
 
@@ -62,6 +62,29 @@ class Employee(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     user = relationship("User", back_populates="employee")
+    attendances = relationship("Attendance", back_populates="employee", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<Employee {self.emp_code}: {self.first_name} {self.last_name}>"
+
+class Attendance(Base):
+    __tablename__ = "attendances"
+
+    id = Column(Integer, primary_key=True, index=True)
+    employee_id = Column(Integer, ForeignKey("employees.id"), nullable=False, index=True)
+    date = Column(String, nullable=False, index=True)  # YYYY-MM-DD
+    check_in = Column(String, nullable=True)  # ISO timestamp
+    check_out = Column(String, nullable=True)  # ISO timestamp
+    work_hours = Column(Float, default=0.0, nullable=False)
+    extra_hours = Column(Float, default=0.0, nullable=False)
+    status = Column(String, default="Present", nullable=False)  # Present, Absent, Leave, Half Day
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    employee = relationship("Employee", back_populates="attendances")
+
+    __table_args__ = (
+        UniqueConstraint('employee_id', 'date', name='_emp_date_uc'),
+    )
+
+    def __repr__(self):
+        return f"<Attendance emp={self.employee_id} date={self.date} status={self.status}>"

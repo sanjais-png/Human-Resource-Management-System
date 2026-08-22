@@ -1,10 +1,11 @@
 import sys
 import os
+from datetime import datetime, date, timedelta
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from app.database import Base, engine, SessionLocal
-from app.models import User, Employee, UserRole
+from app.models import User, Employee, Attendance, UserRole
 from app.auth import get_password_hash
 from app.routers.employees import generate_emp_code, generate_login_id
 
@@ -62,7 +63,6 @@ def seed_database():
                 )
                 db.add(user)
                 db.flush()
-                print(f"Created user: {u['email']} ({u['role'].value})")
 
             emp = db.query(Employee).filter(Employee.email == u["email"]).first()
             if not emp:
@@ -87,7 +87,6 @@ def seed_database():
                 )
                 db.add(emp)
                 db.flush()
-                print(f"Created employee: {code} - {u['first_name']} {u['last_name']}")
 
         sample_employees = [
             {
@@ -145,10 +144,42 @@ def seed_database():
                 )
                 db.add(emp)
                 db.flush()
-                print(f"Created sample employee: {code} - {s['first_name']} {s['last_name']}")
 
         db.commit()
-        print("Database seed finished successfully!")
+
+        # Seed Attendance History for past 3 days
+        all_emps = db.query(Employee).all()
+        today = date.today()
+        past_dates = [(today - timedelta(days=i)).isoformat() for i in range(1, 4)]
+
+        for emp in all_emps:
+            for d in past_dates:
+                att_exists = db.query(Attendance).filter(
+                    Attendance.employee_id == emp.id,
+                    Attendance.date == d
+                ).first()
+                if not att_exists:
+                    in_time = f"{d}T09:00:00"
+                    out_time = f"{d}T17:30:00" if emp.status != "Absent" else None
+                    work_hrs = 8.5 if out_time else 0.0
+                    extra_hrs = 0.5 if out_time else 0.0
+                    att_status = "Present" if out_time else "Absent"
+                    if emp.status == "On Leave":
+                        att_status = "Leave"
+
+                    att = Attendance(
+                        employee_id=emp.id,
+                        date=d,
+                        check_in=in_time if att_status != "Absent" else None,
+                        check_out=out_time if att_status != "Absent" else None,
+                        work_hours=work_hrs if att_status == "Present" else 0.0,
+                        extra_hours=extra_hrs if att_status == "Present" else 0.0,
+                        status=att_status
+                    )
+                    db.add(att)
+
+        db.commit()
+        print("Database seed finished successfully with attendance records!")
     except Exception as e:
         db.rollback()
         print(f"Error seeding database: {e}")
